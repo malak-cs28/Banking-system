@@ -11,6 +11,7 @@ import Image from 'next/image'
 import { Loader2 } from 'lucide-react';
 import { sign } from 'crypto';
 import { useRouter } from 'next/navigation';
+import { signIn, signUp } from '@/lib/actions/user.actions';
 
 const formSchema = (type:string)=> z.object({
   email: z.string().email({ message: "Please enter a valid email" }),
@@ -57,19 +58,19 @@ const AuthForm = ({type}:{type:string}) => {
   setIsLoading(true);
   try {
 
-    // if (type === 'sign-up') {
-    //   const newUser = await signUp(values);
-    //   setUser(newUser);
-    // }
+    if (type === 'sign-up') {
+      const newUser = await signUp(values);
+      setUser(newUser);
+    }
 
-    // if (type === 'sign-in') {
-    //   const response = await signIn({
-    //     email: values.email,
-    //     password: values.password,
-    //   });
-    // }
+    if (type === 'sign-in') {
+      const response = await signIn({
+        email: values.email,
+        password: values.password,
+      });
+    }
 
-    // if (response) router.push('/');
+    if (response) router.push('/');
 
   } catch (error) {
     console.log(error);
