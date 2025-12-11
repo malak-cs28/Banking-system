@@ -22,8 +22,9 @@ const Home = () => {
           />
 
         </header>
+        RECENT TRANSACTIONS
       </div>
-
+      <RightSideBar/>
     </section>
   );
 };
