@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-//import Footer from "./Footer"
+ 
 
 const MobileNav = ({ user }: MobileNavProps) => {
     const pathname = usePathname();
@@ -58,7 +58,7 @@ const MobileNav = ({ user }: MobileNavProps) => {
                             'brightness-[3] invert-0': isActive
                           })}
                         />
-                      <p className={cn("text-16 font-semibold text-black-2", { "text-white": isActive })}>
+                      <p className={cn("text-16 font-semibold text-black-2", { "text-black": isActive })}>
                         {item.label}
                       </p>
                     </Link>

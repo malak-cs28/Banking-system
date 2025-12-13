@@ -1,13 +1,13 @@
 
 import MobileNav from "@/components/MobileNav";
 import Sidebar from "@/components/Sidebar";
-// sdq
+ 
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-  // jkjoo
+  
 }>) { 
   const loggedIn = { firstName: "Adrian", lastName: "JSM" } as User;
 
