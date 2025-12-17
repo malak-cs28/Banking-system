@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import Footer from "./Footer"
+
+
 
 const MobileNav = ({ user }: MobileNavProps) => {
   const pathname = usePathname()
@@ -98,12 +101,18 @@ const MobileNav = ({ user }: MobileNavProps) => {
           </nav>
 
           {/* Optional user info */}
-          {/* <div className="p-4 border-t mt-8 text-center">
+           <div className="p-4 border-t mt-8 text-center">
             <p className="font-semibold">{user?.firstName} {user?.lastName}</p>
             <p className="text-sm text-gray-600">{user?.email}</p>
-          </div> */}
+          </div> 
+
+          <Footer user={user} type="mobile" />
         </SheetContent>
+        
       </Sheet>
+
+
+    
     </section>
   )
 }
