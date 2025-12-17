@@ -13,13 +13,13 @@ const Sidebar = ({ user }: SiderbarProps) => {
         <Link href="/"
           className="mb-12 cursor-pointer flex items-center gap-2">
           <Image 
-            src="/icons/logo.svg"
+            src="/icons/credit-card.svg"
             width={34}
             height={34}
-            alt="Horizon logo"
+            alt="Bamk logo"
             className="size-[24px] max-xl:size-14" 
             />
-             <h1 className="sidebar-logo">Banking System</h1>
+             <h1 className="sidebar-logo">NU Bank</h1>
         </Link>
   
        {sidebarLinks.map((item) => {
