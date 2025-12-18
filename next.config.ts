@@ -15,6 +15,7 @@ const sentryWebpackPluginOptions = {
 };
 
 const nextConfig: NextConfig = {
+  productionBrowserSourceMaps: false, // ✅ ADD THIS
   turbopack: {
     root: process.cwd(),
   },

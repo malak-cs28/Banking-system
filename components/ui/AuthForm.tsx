@@ -59,6 +59,7 @@ const AuthForm = ({ type }: { type: string }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState<any>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -111,6 +112,7 @@ const AuthForm = ({ type }: { type: string }) => {
 
   const onSubmit = async (values: z.infer<ReturnType<typeof formSchema>>) => {
     setIsLoading(true);
+    setErrorMessage(null);
     try {
       if (type === "sign-up") {
         // Format & sanitize fields before sending
@@ -132,7 +134,14 @@ const AuthForm = ({ type }: { type: string }) => {
           ssn: formattedSsn,
         });
 
+        if (!newUser) {
+          setErrorMessage("Signup failed. Please check your details or server configuration.");
+          return;
+        }
+
         setUser(newUser);
+        // Optionally redirect to home after successful signup
+        // router.push("/");
       }
 
       if (type === "sign-in") {
@@ -141,10 +150,16 @@ const AuthForm = ({ type }: { type: string }) => {
           password: values.password,
         });
 
-        if (response) router.push("/");
+        if (!response) {
+          setErrorMessage("Sign in failed. Please check your email and password.");
+          return;
+        }
+
+        router.push("/");
       }
     } catch (error) {
-      console.log("Error signing up:", error);
+      console.log("Error in auth form:", error);
+      setErrorMessage("Unexpected error. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -204,7 +219,9 @@ const AuthForm = ({ type }: { type: string }) => {
 
               <FormInput control={form.control} name="email" label="Email" placeholder="Enter your email" type="email" />
 
-              <div className="h-4"></div>
+              {errorMessage && (
+                <p className="text-sm text-red-500">{errorMessage}</p>
+              )}
 
               <FormInput control={form.control} name="password" label="Password" placeholder="Enter your password" type="password" />
 

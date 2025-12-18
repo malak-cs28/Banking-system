@@ -3,6 +3,39 @@
 import { Client } from "dwolla-v2";
 
 /* ---------------------------------------------
+   TYPES
+--------------------------------------------- */
+type NewDwollaCustomerParams = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  address1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  [key: string]: any;
+};
+
+type CreateFundingSourceOptions = {
+  customerId: string;
+  fundingSourceName: string;
+  plaidToken: string;
+  _links: any;
+};
+
+type AddFundingSourceParams = {
+  dwollaCustomerId: string;
+  processorToken: string;
+  bankName: string;
+};
+
+type TransferParams = {
+  sourceFundingSourceUrl: string;
+  destinationFundingSourceUrl: string;
+  amount: string | number;
+};
+
+/* ---------------------------------------------
    ENVIRONMENT
 --------------------------------------------- */
 const getEnvironment = (): "production" | "sandbox" => {
@@ -17,6 +50,62 @@ const getEnvironment = (): "production" | "sandbox" => {
 };
 
 /* ---------------------------------------------
+   STATE ABBREVIATIONS MAP
+--------------------------------------------- */
+const stateAbbreviations: Record<string, string> = {
+  Alabama: "AL",
+  Alaska: "AK",
+  Arizona: "AZ",
+  Arkansas: "AR",
+  California: "CA",
+  Colorado: "CO",
+  Connecticut: "CT",
+  Delaware: "DE",
+  Florida: "FL",
+  Georgia: "GA",
+  Hawaii: "HI",
+  Idaho: "ID",
+  Illinois: "IL",
+  Indiana: "IN",
+  Iowa: "IA",
+  Kansas: "KS",
+  Kentucky: "KY",
+  Louisiana: "LA",
+  Maine: "ME",
+  Maryland: "MD",
+  Massachusetts: "MA",
+  Michigan: "MI",
+  Minnesota: "MN",
+  Mississippi: "MS",
+  Missouri: "MO",
+  Montana: "MT",
+  Nebraska: "NE",
+  Nevada: "NV",
+  "New Hampshire": "NH",
+  "New Jersey": "NJ",
+  "New Mexico": "NM",
+  "New York": "NY",
+  "North Carolina": "NC",
+  "North Dakota": "ND",
+  Ohio: "OH",
+  Oklahoma: "OK",
+  Oregon: "OR",
+  Pennsylvania: "PA",
+  "Rhode Island": "RI",
+  "South Carolina": "SC",
+  "South Dakota": "SD",
+  Tennessee: "TN",
+  Texas: "TX",
+  Utah: "UT",
+  Vermont: "VT",
+  Virginia: "VA",
+  Washington: "WA",
+  "West Virginia": "WV",
+  Wisconsin: "WI",
+  Wyoming: "WY",
+};
+
+/* ---------------------------------------------
    CLIENT
 --------------------------------------------- */
 const dwollaClient = new Client({
@@ -26,18 +115,58 @@ const dwollaClient = new Client({
 });
 
 /* ---------------------------------------------
-   CREATE CUSTOMER
+   CREATE CUSTOMER WITH STATE VALIDATION
 --------------------------------------------- */
 export const createDwollaCustomer = async (
   newCustomer: NewDwollaCustomerParams
 ) => {
   try {
+    if (newCustomer.state && newCustomer.state.length !== 2) {
+      const mappedState = stateAbbreviations[newCustomer.state];
+      if (mappedState) {
+        newCustomer.state = mappedState;
+      } else {
+        throw new Error(
+          `Invalid state value '${newCustomer.state}'. Must be 2-letter abbreviation or valid full state name.`
+        );
+      }
+    }
+
     const res = await dwollaClient.post("customers", newCustomer);
     return res.headers.get("location");
   } catch (err: any) {
     console.error("❌ DWOLLA CUSTOMER CREATION FAILED");
     console.error("Status:", err?.status);
     console.error("Body:", JSON.stringify(err?.body, null, 2));
+
+    // If a customer with this email already exists in Dwolla,
+    // reuse the existing customer instead of failing signup.
+    try {
+      const body = err?.body;
+      const embeddedErrors = body?._embedded?.errors;
+
+      if (
+        body?.code === "ValidationError" &&
+        Array.isArray(embeddedErrors)
+      ) {
+        const duplicateError = embeddedErrors.find(
+          (e: any) => e?.code === "Duplicate" && e?.path === "/email"
+        );
+
+        const existingCustomerHref =
+          duplicateError?._links?.about?.href;
+
+        if (existingCustomerHref) {
+          console.warn(
+            "⚠️ Dwolla customer already exists for this email. Reusing existing customer URL."
+          );
+          return existingCustomerHref;
+        }
+      }
+    } catch (parseErr) {
+      console.error("Error handling Dwolla duplicate-customer response:", parseErr);
+    }
+
     throw err;
   }
 };

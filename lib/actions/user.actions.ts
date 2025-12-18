@@ -88,7 +88,7 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
         ...userData,
         userId: newUserAccount.$id,
         dwollaCustomerUrl,
-        dwollaCustomerId,
+        dwollaCustomerid: dwollaCustomerId, // Appwrite collection uses lowercase 'i'
       }
     );
 
@@ -170,6 +170,8 @@ export const exchangePublicToken = async ({
   user,
 }: exchangePublicTokenProps) => {
   try {
+    console.log("🔄 Starting Plaid token exchange...");
+    
     // Exchange public token for access token and item ID
     const response = await plaidClient.itemPublicTokenExchange({
       public_token: publicToken,
@@ -177,6 +179,7 @@ export const exchangePublicToken = async ({
 
     const accessToken = response.data.access_token;
     const itemId = response.data.item_id;
+    console.log("✅ Plaid token exchanged successfully");
 
     // Get account info from Plaid
     const accountsResponse = await plaidClient.accountsGet({
@@ -184,6 +187,22 @@ export const exchangePublicToken = async ({
     });
 
     const accountData = accountsResponse.data.accounts[0];
+    console.log("✅ Account data retrieved from Plaid");
+
+    // Get user info to ensure we have dwollaCustomerId
+    let userInfo = user;
+    if (!user.dwollaCustomerId && !user.dwollaCustomerid) {
+      console.log("⚠️ User missing dwollaCustomerId, fetching user info...");
+      const fetchedUser = await getUserInfo({ userId: user.$id || user.userId });
+      if (fetchedUser) {
+        userInfo = fetchedUser;
+      }
+    }
+
+    const dwollaCustomerId = userInfo.dwollaCustomerId || userInfo.dwollaCustomerid;
+    if (!dwollaCustomerId) {
+      throw new Error("User does not have a Dwolla customer ID. Please ensure sign-up completed successfully.");
+    }
 
     // Create processor token for Dwolla
     const request: ProcessorTokenCreateRequest = {
@@ -194,19 +213,23 @@ export const exchangePublicToken = async ({
 
     const processorTokenResponse = await plaidClient.processorTokenCreate(request);
     const processorToken = processorTokenResponse.data.processor_token;
+    console.log("✅ Processor token created");
 
     // Add funding source
     const fundingSourceUrl = await addFundingSource({
-      dwollaCustomerId: user.dwollaCustomerId,
+      dwollaCustomerId: dwollaCustomerId,
       processorToken,
       bankName: accountData.name,
     });
 
-    if (!fundingSourceUrl) throw new Error("Funding source creation failed");
+    if (!fundingSourceUrl) {
+      throw new Error("Funding source creation failed");
+    }
+    console.log("✅ Funding source created");
 
     // Create bank account document
-    await createBankAccount({
-      userId: user.$id,
+    const bankAccount = await createBankAccount({
+      userId: user.$id || user.userId,
       bankId: itemId,
       accountId: accountData.account_id,
       accessToken,
@@ -214,9 +237,20 @@ export const exchangePublicToken = async ({
       sharaebleId: encryptId(accountData.account_id),
     });
 
-    return parseStringify({ publicTokenExchange: "complete" });
-  } catch (error) {
-    console.error("Error exchanging public token:", error);
+    if (!bankAccount) {
+      throw new Error("Failed to create bank account in database");
+    }
+    console.log("✅ Bank account saved to database");
+
+    return parseStringify({ publicTokenExchange: "complete", bankAccount });
+  } catch (error: any) {
+    console.error("❌ Error exchanging public token:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      user: { $id: user?.$id, userId: user?.userId, hasDwollaId: !!(user?.dwollaCustomerId || user?.dwollaCustomerid) }
+    });
+    throw error; // Re-throw so PlaidLink can handle it
   }
 };
 
@@ -306,15 +340,14 @@ export const getBank = async ({ documentId }: getBankProps) => {
     const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID!;
     const APPWRITE_BANK_COLLECTION_ID = process.env.APPWRITE_BANK_COLLECTION_ID!;
 
-    const bank = await database.listDocuments(
+    // Use getDocument instead of listDocuments with Query.equal for $id
+    const bank = await database.getDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_BANK_COLLECTION_ID,
-      [Query.equal("$id", [documentId])]
+      documentId
     );
 
-    if (bank.total !== 1) return null;
-
-    return parseStringify(bank.documents[0]);
+    return parseStringify(bank);
   } catch (error) {
     console.error("Error fetching bank:", error);
     return null;

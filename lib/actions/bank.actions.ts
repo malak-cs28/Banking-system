@@ -22,8 +22,13 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     /// get banks from db
     const banks = await getBanks({ userId });
 
+    // Handle case when no banks exist
+    if (!banks || banks.length === 0) {
+      return parseStringify({ data: [], totalBanks: 0, totalCurrentBalance: 0 });
+    }
+
     const accounts = await Promise.all(
-      banks?.map(async (bank: Bank) => {
+      banks.map(async (bank: Bank) => {
         // get each account info from plaid
         const accountsResponse = await plaidClient.accountsGet({
           access_token: bank.accessToken,
@@ -61,6 +66,7 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
     return parseStringify({ data: accounts, totalBanks, totalCurrentBalance });
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
+    return parseStringify({ data: [], totalBanks: 0, totalCurrentBalance: 0 });
   }
 };
 
@@ -69,6 +75,10 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
   try {
     // get bank from db
     const bank = await getBank({ documentId: appwriteItemId });
+
+    if (!bank || !bank.accessToken) {
+      throw new Error("Bank account not found or missing access token");
+    }
 
     // get account info from plaid
     const accountsResponse = await plaidClient.accountsGet({

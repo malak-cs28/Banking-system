@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react'
+"use client";
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from './button'
 import { PlaidLinkOnSuccess, PlaidLinkOptions, usePlaidLink } from 'react-plaid-link'
 import { useRouter } from 'next/navigation';
@@ -26,31 +28,47 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 
   const onSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token: string) => {
     try {
-      await exchangePublicToken({ publicToken: public_token, user });
-      router.push('/');
-    } catch (err) {
-      console.error("Error exchanging token:", err);
+      console.log("🔄 Exchanging Plaid public token...");
+      const result = await exchangePublicToken({ publicToken: public_token, user });
+      if (result) {
+        console.log("✅ Bank account connected successfully!");
+        router.push('/');
+        router.refresh(); // Refresh to show new account
+      } else {
+        alert("Failed to connect bank account. Please check console for details.");
+      }
+    } catch (err: any) {
+      console.error("❌ Error exchanging token:", err);
+      alert(`Failed to connect bank account: ${err?.message || "Unknown error"}. Please check console for details.`);
     }
   }, [user, router]);
 
-  if (!token) return null; 
+  // Always create a valid config object (hooks must be called unconditionally)
+  // Use empty string as token when not available - usePlaidLink will handle it
+  const config: PlaidLinkOptions = useMemo(() => ({
+    token: token || '',
+    onSuccess,
+  }), [token, onSuccess]);
 
-  const config: PlaidLinkOptions = { token, onSuccess };
+  // Call usePlaidLink unconditionally (hooks must always be called in the same order)
   const { open, ready } = usePlaidLink(config);
+
+  // Don't render if token is not available yet
+  if (!token) return null;
 
   return (
     <>
       {variant === 'primary' ? (
-        <Button onClick={() => open()} disabled={!ready} className="plaidlink-primary">
+        <Button onClick={() => open()} disabled={!ready || !token} className="plaidlink-primary">
           Connect bank
         </Button>
       ) : variant === 'ghost' ? (
-        <Button onClick={() => open()} variant="ghost" className="plaidlink-ghost">
+        <Button onClick={() => open()} variant="ghost" className="plaidlink-ghost" disabled={!ready || !token}>
           <Image src="/icons/connect-bank.svg" alt="connect bank" width={24} height={24} />
           <p className='hidden xl:block text-[16px] font-semibold text-black-2'>Connect bank</p>
         </Button>
       ) : (
-        <Button onClick={() => open()} className="plaidlink-default">
+        <Button onClick={() => open()} className="plaidlink-default" disabled={!ready || !token}>
           <Image src="/icons/connect-bank.svg" alt="connect bank" width={24} height={24} />
           <p className='text-[16px] font-semibold text-black-2'>Connect bank</p>
         </Button>
