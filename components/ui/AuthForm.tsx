@@ -1,17 +1,12 @@
 "use client";
 import Link from 'next/link';
-
-import React, { useEffect, useState } from 'react'
+import React, {use, useEffect, useState} from 'react'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
 import { Button } from "@/components/ui/button"
 import { Form } from "@/components/ui/form"
-import FormInput from "@/components/ui/FormInput"
-
-
-import { PlaidLink } from "@/components/PlaidLink"
+import FormInput from "./FormInput"
 import Image from 'next/image'
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -22,7 +17,7 @@ const formSchema = (type:string)=> z.object({
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
   firstName: type==="sign-in" ? z.string().optional().nullable() : z.string().min(3 , { message: "First name must be at least 3 characters" }),
   lastName: type==="sign-in" ? z.string().optional().nullable() : z.string().min(3 , { message: "Last name must be at least 3 characters" }),
-  address: type==="sign-in" ? z.string().optional().nullable() : z.string().max(50, { message: "Address must be at most 50 characters" }),
+  address1: type==="sign-in" ? z.string().optional().nullable() : z.string().max(50, { message: "Address must be at most 50 characters" }),
   state: type==="sign-in" ? z.string().optional().nullable() : z.string().min(3, { message: "State must be at least 3 characters" }),
   city: type==="sign-in" ? z.string().optional().nullable() : z.string().min(3, { message: "City must be at least 3 characters" }),
   postalCode: type==="sign-in" ? z.string().optional().nullable() : z.string().min(3, { message: "Postal code must be at least 3 characters" }),
@@ -30,10 +25,9 @@ const formSchema = (type:string)=> z.object({
   ssn: type==="sign-in" ? z.string().optional().nullable() : z.string().min(3, { message: "SSN must be at least 3 characters" }),
 })
 
-
 const AuthForm = ({type}:{type:string}) => {
   const router=useRouter();
-  const [user,setUser] = useState<User | null>(null);
+  const [user,setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
  const [loggedInUser, setLoggedInUser] = useState<any>(null);
 
@@ -45,7 +39,7 @@ useEffect(() => {
   fetchUser();
 }, []);
 
-  
+  // ✅ FIXED resolver + type inference
   const form = useForm<z.infer<ReturnType<typeof formSchema>>>({
     resolver: zodResolver(formSchema(type)),
     defaultValues: type === "sign-in" 
@@ -58,7 +52,7 @@ useEffect(() => {
       password: "",
       firstName: "",
       lastName: "",
-      address: "",
+      address1: "",
       city: "",
       state: "",
       postalCode: "",
@@ -71,16 +65,33 @@ useEffect(() => {
   
 
 
-
 const onSubmit = async (values: z.infer<ReturnType<typeof formSchema>>) => {
   setIsLoading(true);
   try {
-    if (type === 'sign-up') {
-      const newUser = await signUp(values);
+    if (type === "sign-up") {
+      const newUser = await signUp({
+        email: values.email,
+        password: values.password,
+        firstName: values.firstName!,
+        lastName: values.lastName!,
+        address1: values.address1!,
+        city: values.city!,
+        state: values.state!,
+        postalCode: values.postalCode!,
+        dateOfBirth: values.dateOfBirth!,
+        ssn: values.ssn!,
+      });
+
       setUser(newUser);
-    } else if (type === 'sign-in') {
-      const response = await signIn({ email: values.email, password: values.password });
-      if (response) router.push('/');
+    }
+
+    if (type === "sign-in") {
+      const response = await signIn({
+        email: values.email,
+        password: values.password,
+      });
+
+      if (response) router.push("/");
     }
   } catch (error) {
     console.log(error);
@@ -88,6 +99,7 @@ const onSubmit = async (values: z.infer<ReturnType<typeof formSchema>>) => {
     setIsLoading(false);
   }
 };
+
 
   return (
     <section className='auth-form'>
@@ -126,11 +138,9 @@ const onSubmit = async (values: z.infer<ReturnType<typeof formSchema>>) => {
         </div>
       </header>
 
-
-
       {user ? (
         <div className='flex flex-col gap-4'>
-          <PlaidLink user={user} variant="primary" />
+          {/* plaid link component */}
         </div>
       ) : (
         <>
@@ -157,7 +167,7 @@ const onSubmit = async (values: z.infer<ReturnType<typeof formSchema>>) => {
 
                     <FormInput
                       control={form.control}
-                      name="address"
+                      name="address1"
                       label="Address"
                       placeholder="Enter your specific address"
                     />
@@ -253,7 +263,6 @@ const onSubmit = async (values: z.infer<ReturnType<typeof formSchema>>) => {
               {type === 'sign-in' ? 'Sign Up' : 'Sign In'}
             </Link>
           </footer>
-
         </>
       )}
     </section>
