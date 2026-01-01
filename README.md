@@ -4,6 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3.4.1-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![CI](https://github.com/BankingSystemOrg/Banking-system/actions/workflows/ci.yml/badge.svg)
 
 NU Bank is a modern, full-featured banking platform that provides users with seamless account management, real-time transaction monitoring, and secure payment processing. Built with cutting-edge technologies and following industry best practices.
 
